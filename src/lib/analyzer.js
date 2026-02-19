@@ -148,18 +148,123 @@ export const generateQuestions = (skills) => {
     return questions.slice(0, 10);
 };
 
+const ENTERPRISE_KEYWORDS = ["infosys", "tcs", "wipro", "amazon", "google", "microsoft", "oracle", "ibm", "capgemini", "accenture", "deloitte", "cognizant", "tech mahindra", "hcl"];
+
+/**
+ * analyzes company type and hiring focus.
+ * @param {string} companyName 
+ * @returns {Object} { type, size, focus }
+ */
+export const analyzeCompany = (companyName) => {
+    if (!companyName) return { type: "Unknown", size: "Unknown", focus: "General Competency" };
+
+    const lowerName = companyName.toLowerCase();
+    const isEnterprise = ENTERPRISE_KEYWORDS.some(k => lowerName.includes(k));
+
+    if (isEnterprise) {
+        return {
+            type: "Enterprise / Service-Based",
+            size: "Large (2000+)",
+            focus: "Strong fundamentals in Aptitude, Core CS (OS/DBMS), and standard DSA. Expect consistent, established interview patterns.",
+            color: "blue"
+        };
+    }
+
+    // Default to Startup/Product
+    return {
+        type: "Startup / Product-Based",
+        size: "Mid-size or Startup (<2000)",
+        focus: "Practical problem solving, development skills (Projects), and system design. Expect adaptibility and culture fit checks.",
+        color: "purple"
+    };
+};
+
+/**
+ * Generates dynamic round mapping based on company type and skills.
+ * @param {Object} skills 
+ * @param {string} companyType 
+ * @returns {Array} List of round objects
+ */
+export const generateRounds = (skills, companyType) => {
+    const rounds = [];
+    const isEnterprise = companyType.includes("Enterprise");
+    const categories = Object.keys(skills);
+
+    // Round 1
+    if (isEnterprise) {
+        rounds.push({
+            name: "Round 1: Online Assessment",
+            description: "Aptitude (Quants, Logical) + Basic Programming MCQs + 1-2 Coding Questions",
+            whyMatters: "Elimination round. Speed and accuracy in aptitude are key here."
+        });
+    } else {
+        rounds.push({
+            name: "Round 1: Screening / HackerRank",
+            description: "Practical Coding Challenge (DSA/Dev) or Take-home assignment",
+            whyMatters: "Tests your hands-on coding ability and code quality before talking to humans."
+        });
+    }
+
+    // Round 2
+    if (isEnterprise) {
+        rounds.push({
+            name: "Round 2: Technical Interview (TR)",
+            description: "DSA (Arrays/Strings), OOPS concepts, DBMS queries, and Project discussion",
+            whyMatters: "Validates your core engineering concepts. Be ready to write code on paper/whiteboard."
+        });
+    } else {
+        rounds.push({
+            name: "Round 2: Technical Deep Dive",
+            description: "Data Structures & Algorithms (Optimization focus) + Language internals",
+            whyMatters: "Assess problem-solving depth. Can you optimize O(n^2) to O(n log n)?"
+        });
+    }
+
+    // Round 3
+    if (categories.includes("Web") && !isEnterprise) {
+        rounds.push({
+            name: "Round 3: System Design / Frameworks",
+            description: "Discussions on Project Architecture, API design, State management (React/Redux), or DB choices",
+            whyMatters: "Tests if you can build scalable, maintainable software, not just write loops."
+        });
+    } else if (isEnterprise) {
+        rounds.push({
+            name: "Round 3: Managerial (MR)",
+            description: "Scenario-based questions, Project challenges, Team fit",
+            whyMatters: "Checks communication skills and stability. Are you a long-term fit?"
+        });
+    } else {
+        rounds.push({
+            name: "Round 3: Hiring Manager",
+            description: "Past experiences, behavioral questions, culture alignment",
+            whyMatters: "The manager decides if they want to work with you daily."
+        });
+    }
+
+    // Round 4
+    rounds.push({
+        name: isEnterprise ? "Round 4: HR Interview" : "Round 4: Culture Fit & Offer",
+        description: "Salary negotiation, Relocation, Company policies",
+        whyMatters: "Final check on logistics and attitude. Usually a formality if you reached here."
+    });
+
+    return rounds;
+};
+
 export const analyzeJD = (text, company, role) => {
     const extractedSkills = extractSkills(text);
     const score = calculateScore(text, company, role, extractedSkills);
     const plan = generatePlan(extractedSkills);
     const questions = generateQuestions(extractedSkills);
+    const companyIntel = analyzeCompany(company);
+    const rounds = generateRounds(extractedSkills, companyIntel.type);
 
-    // Checklist Layout
+    // Checklist Layout (Keep for legacy compatibility if needed, but we'll use rounds mostly)
     const checklist = {
-        "Round 1: Basics": ["Aptitude: Quantitative & Logical", "Verbal Ability", "Basic Resume Screening"],
-        "Round 2: Technical (Core)": ["Data Structures (Arrays, Strings)", "Algorithms (Sorting, Searching)", "Core CS (DBMS, OS, CN)"],
-        "Round 3: Advanced Tech": ["System Design (Low Level)", "Project Deep Dive", "Live Coding / Whiteboarding"],
-        "Round 4: Behavioral": ["STAR Method answers", "Company research", "Salary discussion prep"]
+        "Round 1": rounds[0].description.split('+').map(s => s.trim()),
+        "Round 2": rounds[1].description.split('+').map(s => s.trim()),
+        "Round 3": rounds[2].description.split('+').map(s => s.trim()),
+        "Round 4": rounds[3].description.split(',').map(s => s.trim())
     };
 
     return {
@@ -172,6 +277,8 @@ export const analyzeJD = (text, company, role) => {
         readinessScore: score,
         plan,
         questions,
-        checklist
+        checklist,
+        companyIntel,
+        rounds
     };
 };

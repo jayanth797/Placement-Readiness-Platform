@@ -5,7 +5,7 @@ import Button from '../../components/ui/Button';
 import { analyzeJD } from '../../lib/analyzer';
 import { useJobHistory } from '../../hooks/useJobHistory';
 import ReadinessCircle from '../dashboard/ReadinessCircle';
-import { CheckCircle2, ChevronRight, HelpCircle, Copy, Download, ArrowRight, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, HelpCircle, Copy, Download, ArrowRight, AlertCircle, Building } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const JobAnalysis = () => {
@@ -324,25 +324,87 @@ ${result.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
                 )}
 
                 {activeTab === 'checklist' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {Object.entries(result.checklist).map(([round, items]) => (
-                            <Card key={round}>
+                    <div className="space-y-6">
+                        {/* Company Intel Card */}
+                        {result.companyIntel && (
+                            <Card className={`border-l-4 ${result.companyIntel.color === 'blue' ? 'border-l-blue-500 bg-blue-50/50' : 'border-l-purple-500 bg-purple-50/50'}`}>
                                 <CardContent className="p-6">
-                                    <h4 className="font-bold text-slate-900 mb-4">{round}</h4>
-                                    <ul className="space-y-3">
-                                        {items.map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-sm text-slate-700">
-                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Building className={`w-5 h-5 ${result.companyIntel.color === 'blue' ? 'text-blue-600' : 'text-purple-600'}`} />
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${result.companyIntel.color === 'blue' ? 'text-blue-600' : 'text-purple-600'}`}>
+                                            {result.companyIntel.type}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-slate-900 mb-2">Hiring Focus</h3>
+                                    <p className="text-slate-700 text-sm mb-3">{result.companyIntel.focus}</p>
+                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        <span>Est. Size: {result.companyIntel.size}</span>
+                                        <span>•</span>
+                                        <span className="italic">Demo Mode: Heuristic Analysis</span>
+                                    </div>
                                 </CardContent>
                             </Card>
-                        ))}
-                        <div className="col-span-full flex justify-center mt-4">
+                        )}
+
+                        <div className="grid gap-6">
+                            {result.rounds ? (
+                                // New Timeline View
+                                <div className="space-y-0">
+                                    {result.rounds.map((round, i) => (
+                                        <div key={i} className="flex gap-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shrink-0 z-10">
+                                                    {i + 1}
+                                                </div>
+                                                {i < result.rounds.length - 1 && (
+                                                    <div className="w-0.5 h-full bg-slate-200 my-1"></div>
+                                                )}
+                                            </div>
+                                            <div className="pb-8 flex-1">
+                                                <Card>
+                                                    <CardContent className="p-5">
+                                                        <h4 className="font-bold text-slate-900 text-lg mb-1">{round.name}</h4>
+                                                        <p className="text-slate-600 mb-3">{round.description}</p>
+                                                        <div className="bg-slate-50 p-3 rounded-md border border-slate-100">
+                                                            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Why this round matters</p>
+                                                            <p className="text-sm text-slate-700 italic">"{round.whyMatters}"</p>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                // Fallback to old grid if no rounds data (legacy history)
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {Object.entries(result.checklist).map(([round, items]) => (
+                                        <Card key={round}>
+                                            <CardContent className="p-6">
+                                                <h4 className="font-bold text-slate-900 mb-4">{round}</h4>
+                                                <ul className="space-y-3">
+                                                    {items.map((item, i) => (
+                                                        <li key={i} className="flex items-center gap-3 text-sm text-slate-700">
+                                                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                                            {item}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-center mt-4">
                             <Button variant="outline" onClick={() => {
-                                const text = Object.entries(result.checklist).map(([round, items]) => `${round}:\n${items.map(i => `- ${i}`).join('\n')}`).join('\n\n');
+                                let text = "";
+                                if (result.rounds) {
+                                    text = result.rounds.map(r => `${r.name}\n${r.description}\nWhy: ${r.whyMatters}`).join('\n\n');
+                                } else {
+                                    text = Object.entries(result.checklist).map(([round, items]) => `${round}:\n${items.map(i => `- ${i}`).join('\n')}`).join('\n\n');
+                                }
                                 copyToClipboard(text, "Checklist");
                             }}>
                                 <Copy className="w-4 h-4 mr-2" /> Copy Full Checklist
