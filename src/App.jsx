@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import DashboardLayout from './components/layout/DashboardLayout';
+import DashboardHome from './pages/DashboardHome';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 function App() {
@@ -10,7 +11,7 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
 
                 <Route path="/dashboard" element={<DashboardLayout />}>
-                    <Route index element={<PlaceholderPage title="Dashboard Home" />} />
+                    <Route index element={<DashboardHome />} />
                     <Route path="practice" element={<PlaceholderPage title="Practice Problems" />} />
                     <Route path="assessments" element={<PlaceholderPage title="Assessments" />} />
                     <Route path="resources" element={<PlaceholderPage title="Learning Resources" />} />
