@@ -22,6 +22,14 @@ export const useJobHistory = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     };
 
+    const updateEntry = (updatedEntry) => {
+        const updated = history.map(item =>
+            item.id === updatedEntry.id ? updatedEntry : item
+        );
+        setHistory(updated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    };
+
     const getEntry = (id) => {
         return history.find(item => item.id === id);
     };
@@ -31,5 +39,5 @@ export const useJobHistory = () => {
         localStorage.removeItem(STORAGE_KEY);
     }
 
-    return { history, saveEntry, getEntry, clearHistory };
+    return { history, saveEntry, updateEntry, getEntry, clearHistory };
 };
