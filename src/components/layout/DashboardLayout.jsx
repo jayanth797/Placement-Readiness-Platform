@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Code, ClipboardCheck, BookOpen, User, Menu } from 'lucide-react';
+import { LayoutDashboard, Code, ClipboardCheck, BookOpen, User, Menu, Search, History } from 'lucide-react';
 
 const DashboardLayout = () => {
     const location = useLocation();
@@ -10,6 +10,8 @@ const DashboardLayout = () => {
         { name: 'Practice', icon: Code, path: '/dashboard/practice' },
         { name: 'Assessments', icon: ClipboardCheck, path: '/dashboard/assessments' },
         { name: 'Resources', icon: BookOpen, path: '/dashboard/resources' },
+        { name: 'Job Analysis', icon: Search, path: '/dashboard/analyze' },
+        { name: 'History', icon: History, path: '/dashboard/history' },
         { name: 'Profile', icon: User, path: '/dashboard/profile' },
     ];
 
@@ -30,8 +32,8 @@ const DashboardLayout = () => {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex items-center px-3 py-2.5 rounded-lg transition-colors group ${isActive
-                                        ? 'bg-primary/10 text-primary font-medium'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                             >
                                 <Icon className={`w-5 h-5 mr-3 transition-colors ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'}`} />
