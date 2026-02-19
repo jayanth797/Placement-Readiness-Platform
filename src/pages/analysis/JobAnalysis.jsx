@@ -126,6 +126,12 @@ PLACEMENT PREP PLAN
 Role: ${result.role || 'N/A'}
 Company: ${result.company || 'N/A'}
 Readiness Score: ${liveScore}/100
+${result.companyIntel ? `
+COMPANY INTEL:
+Type: ${result.companyIntel.type}
+Size: ${result.companyIntel.size}
+Focus: ${result.companyIntel.focus}
+` : ''}
 
 SKILLS:
 ${Object.entries(result.extractedSkills).map(([cat, skills]) =>
@@ -136,9 +142,10 @@ ${Object.entries(result.extractedSkills).map(([cat, skills]) =>
 ${result.plan.map(d => `Day ${d.day}: ${d.title}\n${d.tasks.map(t => `- ${t}`).join('\n')}`).join('\n\n')}
 
 CHECKLIST:
-${Object.entries(result.checklist).map(([round, items]) =>
-            `${round}:\n${items.map(i => `- ${i}`).join('\n')}`
-        ).join('\n\n')}
+CHECKLIST:
+${result.rounds
+                ? result.rounds.map(r => `${r.name}\nDescription: ${r.description}\nWhy it matters: ${r.whyMatters}`).join('\n\n')
+                : Object.entries(result.checklist).map(([round, items]) => `${round}:\n${items.map(i => `- ${i}`).join('\n')}`).join('\n\n')}
 
 QUESTIONS:
 ${result.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
