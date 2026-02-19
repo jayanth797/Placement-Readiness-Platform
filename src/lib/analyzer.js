@@ -252,8 +252,33 @@ export const generateRounds = (skills, companyType) => {
 };
 
 export const analyzeJD = (text, company, role) => {
-    const extractedSkills = extractSkills(text);
-    const score = calculateScore(text, company, role, extractedSkills);
+    // 1. Extract Skills
+    let extractedSkills = extractSkills(text);
+    const hasSkills = Object.values(extractedSkills).some(arr => arr.length > 0);
+
+    // 2. Fallback if no skills
+    if (!hasSkills) {
+        extractedSkills = {
+            "Core CS": [],
+            "Languages": [],
+            "Web": [],
+            "Data": [],
+            "Cloud/DevOps": [],
+            "Testing": [],
+            "Other": ["Communication", "Problem solving", "Basic coding", "Projects"]
+        };
+    } else {
+        // Ensure all keys exist even if empty
+        const keys = ["Core CS", "Languages", "Web", "Data", "Cloud/DevOps", "Testing", "Other"];
+        keys.forEach(k => {
+            if (!extractedSkills[k]) extractedSkills[k] = [];
+        });
+    }
+
+    // 3. Scores
+    const baseScore = calculateScore(text, company, role, extractedSkills);
+
+    // 4. Generate Content
     const plan = generatePlan(extractedSkills);
     const questions = generateQuestions(extractedSkills);
     const companyIntel = analyzeCompany(company);
@@ -261,24 +286,37 @@ export const analyzeJD = (text, company, role) => {
 
     // Checklist Layout (Keep for legacy compatibility if needed, but we'll use rounds mostly)
     const checklist = {
-        "Round 1": rounds[0].description.split('+').map(s => s.trim()),
-        "Round 2": rounds[1].description.split('+').map(s => s.trim()),
-        "Round 3": rounds[2].description.split('+').map(s => s.trim()),
-        "Round 4": rounds[3].description.split(',').map(s => s.trim())
+        "Round 1": rounds[0] ? rounds[0].description.split('+').map(s => s.trim()) : [],
+        "Round 2": rounds[1] ? rounds[1].description.split('+').map(s => s.trim()) : [],
+        "Round 3": rounds[2] ? rounds[2].description.split('+').map(s => s.trim()) : [],
+        "Round 4": rounds[3] ? rounds[3].description.split(',').map(s => s.trim()) : []
     };
 
+    // 5. Return Standardized Schema
     return {
         id: Date.now().toString(),
         createdAt: new Date().toISOString(),
-        company,
-        role,
-        jdText: text,
+        updatedAt: new Date().toISOString(),
+        company: company || "",
+        role: role || "",
+        jdText: text || "",
         extractedSkills,
-        readinessScore: score,
-        plan,
-        questions,
+
+        // Mapping & Content
+        roundMapping: rounds, // Alias for 'rounds' to match req, keeping 'rounds' for UI compat if needed
+        rounds, // Keeping this as primary for current UI
         checklist,
-        companyIntel,
-        rounds
+        plan7Days: plan, // Alias maps to 'plan'
+        plan, // Keeping this
+        questions,
+
+        // Scoring
+        baseScore,
+        finalScore: baseScore, // Initially same
+        readinessScore: baseScore, // Legacy mapping
+        skillConfidenceMap: {}, // Empty start
+
+        // Metadata
+        companyIntel
     };
 };

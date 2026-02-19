@@ -27,62 +27,86 @@ const JobAnalysis = () => {
             const entry = getEntry(historyId);
             if (entry) {
                 setResult(entry);
-                setInput({ company: entry.company, role: entry.role, text: entry.jdText });
+                setInput({ company: entry.company || '', role: entry.role || '', text: entry.jdText || '' });
 
                 // Initialize confidence map if it exists, else default to 'practice'
-                if (entry.skillConfidence) {
+                if (entry.skillConfidenceMap && Object.keys(entry.skillConfidenceMap).length > 0) {
+                    setSkillConfidence(entry.skillConfidenceMap);
+                } else if (entry.skillConfidence) {
+                    // Legacy fallback
                     setSkillConfidence(entry.skillConfidence);
                 } else {
                     const initialConfidence = {};
+                    // Handle both structure types (array of strings vs object with arrays)
+                    // New schema: extractedSkills is object { CoreCS: [], ... }
                     Object.values(entry.extractedSkills).flat().forEach(skill => {
-                        initialConfidence[skill] = 'practice';
+                        if (typeof skill === 'string') initialConfidence[skill] = 'practice';
                     });
                     setSkillConfidence(initialConfidence);
                 }
 
-                // Set initial score (use stored live score if available, else calc base)
-                setLiveScore(entry.liveScore || entry.readinessScore);
+                // Set initial score 
+                // Prefer finalScore (new) -> liveScore (legacy) -> baseScore (new) -> readinessScore (legacy)
+                const score = entry.finalScore ?? entry.liveScore ?? entry.baseScore ?? entry.readinessScore;
+                setLiveScore(score);
             }
         }
     }, [historyId, getEntry]);
 
     // Recalculate score and persist when confidence changes
+    // Recalculate score and persist when confidence changes
     useEffect(() => {
         if (!result) return;
 
         let scoreChange = 0;
-        let weakSkills = [];
 
-        Object.entries(skillConfidence).forEach(([skill, status]) => {
+        Object.values(skillConfidence).forEach(status => {
             if (status === 'know') scoreChange += 2;
-            else {
-                scoreChange -= 2;
-                weakSkills.push(skill);
-            }
+            else if (status === 'practice') scoreChange -= 2;
         });
 
         // Base score min 0 max 100
-        const newScore = Math.max(0, Math.min(100, result.readinessScore + scoreChange));
-        setLiveScore(newScore);
+        // Use result.baseScore if available (new schema), else fallback to readinessScore
+        const base = result.baseScore !== undefined ? result.baseScore : result.readinessScore;
+        const newScore = Math.max(0, Math.min(100, base + scoreChange));
+
+        // Avoid loop: only update state if different
+        if (newScore !== liveScore) {
+            setLiveScore(newScore);
+        }
 
         // Persist to history if it's an existing entry and data has changed
-        // We avoid infinite loop by checking if values actually differ from likely stored values
-        // Ideally we'd debounce this or only save on specific actions, 
-        // but for "live" persistence we'll simply update the entry object.
         if (result.id) {
             const updatedEntry = {
                 ...result,
                 skillConfidence,
-                liveScore: newScore
+                finalScore: newScore,
+                updatedAt: new Date().toISOString()
             };
-            // Only update if actually different to avoid render loops (simple check)
-            // For now, we update on unmount or explicitly? 
-            // React's strict mode might double invoke. 
-            // Let's debounce the save or just save when skillConfidence changes.
-            updateEntry(updatedEntry);
+
+            // Debounce or check before calling expensive storage op?
+            // For now, simple check: is this different from result?
+            // (Assuming result in state is the "source of truth" from load)
+            // Ideally we'd compare deeply, but updateEntry handles array replace.
+
+            // To prevent infinite loop with result dependency, we only update if 
+            // the confidence map or score is actually different from what's in 'result'.
+            // Note: 'result' is the state from getEntry or initial analyze.
+
+            // Check if confidence changed from result's stored confidence
+            const hasChanged = JSON.stringify(result.skillConfidence) !== JSON.stringify(skillConfidence);
+
+            if (hasChanged) {
+                updateEntry(updatedEntry);
+                // IMPORTANT: Update local result state so we don't save again immediately
+                // effectively syncing local state with "saved" state logic logic
+                // setResult(updatedEntry); // This might cause re-render loop if not careful.
+                // Actually updateEntry updates the hook state, but not this component's local result state 
+                // unless we re-fetch. But we want live updates.
+            }
         }
 
-    }, [skillConfidence, result?.readinessScore]); // Depend on confidence map
+    }, [skillConfidence, result?.baseScore, result?.readinessScore]); // Depend on confidence map
 
     const handleAnalyze = () => {
         if (!input.text.trim()) return;
@@ -91,18 +115,18 @@ const JobAnalysis = () => {
         // Init confidence
         const initialConfidence = {};
         Object.values(analysis.extractedSkills).flat().forEach(skill => {
-            initialConfidence[skill] = 'practice';
+            if (typeof skill === 'string') initialConfidence[skill] = 'practice';
         });
 
         const entry = {
             ...analysis,
-            skillConfidence: initialConfidence,
-            liveScore: analysis.readinessScore
+            skillConfidenceMap: initialConfidence,
+            finalScore: analysis.baseScore
         };
 
         setResult(entry);
         setSkillConfidence(initialConfidence);
-        setLiveScore(analysis.readinessScore);
+        setLiveScore(analysis.baseScore);
         saveEntry(entry);
     };
 
@@ -164,6 +188,8 @@ ${result.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
     if (!result) {
         // Input Mode (Same as before)
+        const isTooShort = input.text.length > 0 && input.text.length < 200;
+
         return (
             <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
                 <div className="text-center mb-8">
@@ -199,11 +225,20 @@ ${result.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700">Job Description *</label>
                             <textarea
-                                className="w-full h-64 p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+                                className={cn(
+                                    "w-full h-64 p-3 border rounded-lg focus:ring-2 outline-none resize-none transition-colors",
+                                    isTooShort ? "border-amber-300 focus:border-amber-400 focus:ring-amber-200 bg-amber-50/30" : "border-slate-200 focus:ring-primary/20 focus:border-primary"
+                                )}
                                 placeholder="Paste the full job description here..."
                                 value={input.text}
                                 onChange={(e) => setInput({ ...input, text: e.target.value })}
                             />
+                            {isTooShort && (
+                                <p className="text-xs text-amber-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    This JD is too short (less than 200 chars). Paste full JD for better output.
+                                </p>
+                            )}
                         </div>
 
                         <Button onClick={handleAnalyze} className="w-full md:w-auto" disabled={!input.text.trim()}>

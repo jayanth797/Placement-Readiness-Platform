@@ -9,9 +9,16 @@ export const useJobHistory = () => {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             try {
-                setHistory(JSON.parse(stored));
+                const parsed = JSON.parse(stored);
+                // Filter out corrupted entries
+                const valid = Array.isArray(parsed) ? parsed.filter(item => item && item.id && item.createdAt) : [];
+                setHistory(valid);
             } catch (e) {
                 console.error("Failed to parse history", e);
+                // If corrupted, should we clear? Or just start empty?
+                // Let's start empty but NOT clear to avoid auto-wiping user data without permission if it's potentially salvagable by advanced means.
+                // But for app stability, we treat as empty.
+                setHistory([]);
             }
         }
     }, []);
