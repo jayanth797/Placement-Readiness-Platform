@@ -5,6 +5,9 @@ import DashboardHome from './pages/DashboardHome';
 import PlaceholderPage from './pages/PlaceholderPage';
 import JobAnalysis from './pages/analysis/JobAnalysis';
 import AnalysisHistory from './pages/analysis/AnalysisHistory';
+import TestChecklist from './pages/TestChecklist';
+import ShipPage from './pages/ShipPage';
+import ProofPage from './pages/ProofPage';
 
 function App() {
     return (
@@ -21,6 +24,10 @@ function App() {
                     <Route path="analyze" element={<JobAnalysis />} />
                     <Route path="history" element={<AnalysisHistory />} />
                 </Route>
+
+                <Route path="/prp/07-test" element={<TestChecklist />} />
+                <Route path="/prp/08-ship" element={<ShipPage />} />
+                <Route path="/prp/proof" element={<ProofPage />} />
 
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
